@@ -1,0 +1,53 @@
+from telethon.sync import TelegramClient
+from telethon.sessions import StringSession
+import asyncio
+import re
+
+# بيانات الحسابات (أضف بيانات حقيقية)
+accounts = [
+    {
+        'api_id': 123456,
+        'api_hash': 'your_api_hash',
+        'session_string': 'your_session_string_1'
+    },
+    {
+        'api_id': 123456,
+        'api_hash': 'your_api_hash',
+        'session_string': 'your_session_string_2'
+    },
+    # أضف المزيد...
+]
+
+# === طلب رابط المنشور من المستخدم ===
+target_url = input("أدخل رابط منشور تيليجرام (مثال: https://t.me/channel/123): ").strip()
+
+# === استخراج اسم القناة ورقم الرسالة من الرابط ===
+match = re.match(r"https://t\.me/([^/]+)/(\d+)", target_url)
+if not match:
+    print("الرابط غير صحيح! تأكد من الشكل: https://t.me/channel/123")
+    exit()
+
+channel_username = match.group(1)
+message_id = int(match.group(2))
+
+# === وظيفة الرشق ===
+async def send_like(account):
+    try:
+        async with TelegramClient(StringSession(account['session_string']), account['api_id'], account['api_hash']) as client:
+            print(f"[+] تسجيل الدخول بـ {account['session_string'][:10]}...")
+            msg = await client.get_messages(channel_username, ids=message_id)
+
+            if msg.buttons:
+                await msg.click(0, 0)  # يضغط الزر الأول (اللايك)
+                print("[+] تم إرسال لايك من هذا الحساب.")
+            else:
+                print("[-] لا يوجد زر تفاعل في المنشور.")
+    except Exception as e:
+        print(f"[-] خطأ في الحساب: {str(e)}")
+
+# === تنفيذ الرشق من كل الحسابات ===
+async def main():
+    tasks = [asyncio.create_task(send_like(acc)) for acc in accounts]
+    await asyncio.gather(*tasks)
+
+asyncio.run(main())
